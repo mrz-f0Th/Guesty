@@ -1,0 +1,123 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+</head>
+
+<body>
+    <div>
+        <label for="num-classes">Number of classes (fill this first)</label>
+        <input id="num-classes" />
+    </div>
+    <button id="start">Start</button>
+
+    <br />
+
+    <video autoplay muted loop controls id="video" width="400" height="300"></video>
+
+    <div>
+        <label for="label">Label for the class</label>
+        <input id="label" />
+        <button id="capture">Capture</button>
+    </div>
+
+    <br />
+
+    <button id="train">Train</button>
+    <button id="get-result">Get Result</button>
+
+    <h2 id="result">result</h2>
+
+    <canvas id="canvas" width="400" height="300"></canvas>
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+    <script>
+        function getElem(id) {
+            return document.getElementById(id);
+        }
+
+        // html elements
+
+        const video = getElem("video");
+        const canvas = getElem("canvas");
+        const start = getElem("start");
+        const capture = getElem("capture");
+        const train = getElem("train");
+        const input = getElem("label");
+        const getResult = getElem("get-result");
+        const resultText = getElem("result");
+        const numClasses = getElem("num-classes");
+
+        start.addEventListener("click", setup);
+        capture.addEventListener("click", drawOnCanvas);
+        train.addEventListener("click", trainModel);
+        getResult.addEventListener("click", getPrediction);
+
+        let classifier;
+
+        function modalReady() {
+            console.log("Model is ready!");
+        }
+
+        function videoReady() {
+            console.log("Video is ready");
+        }
+
+        function setup() {
+            const mobilenet = ml5.featureExtractor(
+                "MobileNet", {
+                    numLabels: parseInt(numClasses.value)
+                },
+                modalReady
+            );
+
+            classifier = mobilenet.classification(video, videoReady);
+
+            navigator.mediaDevices.getUserMedia({
+                video: true
+            }).then((stream) => {
+                video.srcObject = stream;
+            });
+        }
+
+        function drawOnCanvas() {
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, 400, 300);
+
+            addImageToModel();
+        }
+
+        function addImageToModel() {
+            classifier.addImage(canvas, input.value);
+        }
+
+        function trainModel() {
+            classifier.train((lossValue) => {
+                console.log("Loss is", lossValue);
+            });
+            classifier.save();
+        }
+
+        function getPrediction() {
+            const callback = () =>
+                classifier.classify(video, (err, results) => {
+                    if (!results) return;
+
+                    let final = {
+                        label: "",
+                        confidence: 0,
+                    };
+
+                    results.forEach((result) => {
+                        if (result.confidence > final.confidence) {
+                            final = result;
+                        }
+                    });
+                    resultText.innerHTML = final.label + " " + final.confidence.toFixed(2);
+                });
+
+            setInterval(() => callback(), 200);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,4 @@
+app/templates/index.html
+app/templates/scaning.html
+node_modules/
+vendor/
